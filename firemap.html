@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Χάρτης Πρόβλεψης Κινδύνου Πυρκαγιάς</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: rgba(17,24,39,0.86);
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --line: rgba(255,255,255,0.08);
+      --accent: #22c55e;
+      --accent-2: #38bdf8;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --shadow: 0 20px 50px rgba(0,0,0,0.25);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #708654;
+      color: var(--text);
+    }
+
+    .app-shell {
+      width: min(1380px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0 40px;
+    }
+
+    .hero, .card {
+      backdrop-filter: blur(12px);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      border-radius: 28px;
+      padding: 28px;
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .brand-badge {
+      width: 112px;
+      height: 112px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 28px;
+      padding: 8px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.16);
+      box-shadow: 0 12px 26px rgba(0,0,0,0.18);
+      backdrop-filter: blur(8px);
+      flex-shrink: 0;
+    }
+
+    .brand-logo {
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+      background: transparent;
+      padding: 0;
+      border: 0;
+      box-shadow: none;
+      display: block;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent-2);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    h1, h2 { margin: 0; }
+    h1 {
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.08;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: var(--muted);
+      max-width: 780px;
+      line-height: 1.55;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 13px 18px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: white;
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.6fr 0.9fr;
+      gap: 20px;
+    }
+
+    .card {
+      border-radius: var(--radius);
+      padding: 22px;
+    }
+
+    .full-width { grid-column: 1 / -1; }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+
+    .badge {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.12);
+      color: #bae6fd;
+      border: 1px solid rgba(56, 189, 248, 0.24);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .status-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .status-box, .weather-box {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .status-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .map-frame {
+      position: relative;
+      min-height: 540px;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .map-frame img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: contain;
+    }
+
+    .map-footer {
+      margin-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .legend-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .legend-item {
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      padding: 14px;
+      background: rgba(255,255,255,0.035);
+    }
+
+    .legend-item p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .legend-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .level-1 .swatch { background: #9be98a; }
+    .level-2 .swatch { background: #6ba7d6; }
+    .level-3 .swatch { background: #ffe34f; }
+    .level-4 .swatch { background: #ff9f1c; }
+    .level-5 .swatch { background: #ef4444; }
+
+    .location-picker {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 250px;
+    }
+
+    .location-picker label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .location-picker select {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      padding: 12px 14px;
+    }
+
+    .weather-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .forecast-strip {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+
+    .forecast-day {
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      padding: 14px;
+      background: rgba(255,255,255,0.035);
+    }
+
+    .forecast-day h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+
+    .forecast-day p {
+      margin: 4px 0;
+      color: var(--muted);
+    }
+
+    .notice {
+      margin-bottom: 16px;
+      border-radius: 16px;
+      padding: 12px 14px;
+      border: 1px solid rgba(245, 158, 11, 0.32);
+      background: rgba(245, 158, 11, 0.12);
+      color: #fde68a;
+      line-height: 1.5;
+    }
+
+    .card-notes p {
+      margin: 12px 0 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 1100px) {
+      .grid { grid-template-columns: 1fr; }
+      .weather-grid { grid-template-columns: repeat(2, 1fr); }
+      .forecast-strip { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 760px) {
+      .app-shell {
+        width: min(100% - 20px, 100%);
+        padding-top: 12px;
+      }
+      .hero {
+        padding: 20px;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .card { padding: 18px; }
+      .status-row, .weather-grid, .forecast-strip { grid-template-columns: 1fr; }
+      .map-frame { min-height: 320px; }
+      .hero-actions, .card-head { width: 100%; }
+      .card-head { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div>
+        <div class="brand-lockup">
+          <div class="brand-badge"><img class="brand-logo" src="data:image/webp;base64,UklGRjA9AQBXRUJQVlA4ICQ9AQAwJgCdASoICacCPk02l0ikIyIhKAiQAA2JZQAcSeP9x8L6TD72ndOnv91f/RPu3/iv///mPW7+lfxH4v+hffP+4f9W8w/7f9M/6P9f8d/7f6n+f/Xf0H9k/5X///e/RfbH6R/fv+0+Sf8F6P3d8p/6z4v9V+Y/0j7o/kf+M+sP0P+x///9h+w/4v/Vf4j91/oP7V/fP+n/mf8D+7f93/ff2z+0f0n+5f4f0n/oP4f/W/tX7J/RPp7+2fdr+N+sPpv9S+gvqv7F+T/4r+M+8P4P+oflf6n/Rv1r9i9D+qf+L/U/u38C/Gv4n8x/IPxL+s/3P/Yv8p+4/xD+B/iv7F9X/ZX1P/3vq7+8f8f+v9y+5f0P7Q+1f4P9Q+qf1r///Bftv9d/bv8b/Xfsn+W+6f9R+nPpX4v+K/a/6Z/RPqH5h+E/v3+M+0f6l+vP6D+y/5v9f/3f2P+p+Xf7N9a/pn6d/uv+e+oP6j/Lv9F////N+8P9X/s39F/hv7N+oP9s+T/4H9B/uP5V+4fzr9q/1n8F+Pf1P5j+uPZf+T+F+f/3T8W/b/8p9g/xf7g/bf+Q+NfX/8r+4/if8V/Gf0P7X/0r+2f9o+6f9M+tP2j+vf1L+4/5v9V+hPXv5R8a+3P5/9nX5kAAD+/6akPo3qfIHvv+/6u54a6M6GKMmWtFjQPoTn3vPiv69//+FZQ2c0+4mJ3J1pQ6LOQJP6aUVSHxIn5S3o91Mnzm3fRJtIq8jHk9A8xeQNDbqFqB1GuJoFxY1qjI1yV0u4rUq6R8YJ21FVCfR+N/2v3IYbV0J7Qm3fYBWi9b3kzV7mPrlKj5L3ys2I+7v6rj1kN2HhLwq8eGVMdL8w8dQx5ml3VdWYf0SgJf5e+0zQf3Xf1pYgto6vYkX1+N0By9e0c1dq7Vt3kXvI+7l8m4g6C4xhjQ7Smyv3/MBQ9Y+S3hD5T5YhE1G7s7K5Lk8dvcE3d+0N88u+Vq3sAT/XfeA8wN2o1z2vU2nJgO8dY4v0hQzG4gW6tU+YQeMMQh0v9fB9b4y2tWl4A2kS1lJ5l9C0g3k8mG6vE2lNhqg4Wl0R35Fsl4M2K7c9C94Q6Yh2W3w7Xclx8j+vQeY3Dg2iYv7FW5dprS1qkK8FspmNh6JgHdUo7M8F9fB7Oce3u9xXlq2p8jQn4vF1Q4LQHk4fQPOhs1Yd8c6tqBBjA6d8+7kz4G1Wz4O3A5Xnv1TXX5sU6oJUTp6gCWZV4wJx0z7q9Yz89UoUqY1rQ6nlKSVR6kzW3e0jVJZf4V7vPp6U3FdUrM4Md4cR5kH6wqzvV1iBvWZx4M6yxNQwUcwT0d9UQ1kK8r+uUBM8fY4/WC8aQvC8jYVxR8qF0t4dE4Yx2t+XwA3MfVbQdN3tGv3z6x3Br1aU3wK2kQkY0J5G1iYq6AA==" alt="Λογότυπο ΕΔΠΑ" /></div>
+          <div>
+            <p class="eyebrow">Εθελοντική Δράση Πάρνηθας</p>
+            <h1>Χάρτης Πρόβλεψης Κινδύνου Πυρκαγιάς</h1>
+          </div>
+        </div>
+        <p class="subtitle">
+          Αυτόματη παρακολούθηση του επίσημου χάρτη, επεξήγηση επικινδυνότητας και πρόγνωση καιρού
+          για την περιοχή που σε ενδιαφέρει.
+        </p>
+      </div>
+      <div class="hero-actions">
+        <button id="refreshBtn" class="btn btn-primary">Ανανέωση καιρού</button>
+        <a class="btn btn-secondary" href="https://civilprotection.gov.gr/xartis" target="_blank" rel="noopener noreferrer">Άνοιγμα επίσημης σελίδας</a>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="card card-map">
+        <div class="card-head">
+          <div>
+            <h2>Τρέχων χάρτης</h2>
+            <p class="muted">Canvas preview της εφαρμογής. Στην τελική deployed έκδοση ο χάρτης ενημερώνεται αυτόματα.</p>
+          </div>
+          <span class="badge">Preview</span>
+        </div>
+
+        <div class="status-row">
+          <div class="status-box">
+            <span class="status-label">Προβολή</span>
+            <strong id="validFor">Παρασκευή 31/10/2025</strong>
+          </div>
+          <div class="status-box">
+            <span class="status-label">Τελευταία ανανέωση</span>
+            <strong id="lastChecked">-</strong>
+          </div>
+          <div class="status-box">
+            <span class="status-label">Κατάσταση</span>
+            <strong id="mapStatus">Αρχειακός χάρτης</strong>
+          </div>
+        </div>
+
+        <div class="notice">
+          Η σελίδα preview δείχνει τον τελευταίο διαθέσιμο αρχειακό χάρτη, ώστε να βλέπεις αμέσως το layout. Η deployed έκδοση κάνει έλεγχο και update μόλις ανέβει νέα έκδοση στην επίσημη πηγή.
+        </div>
+
+        <div class="map-frame">
+          <img id="fireMapImage" src="https://civilprotection.gov.gr/sites/default/files/2025-10/251031.jpg" alt="Χάρτης Πρόβλεψης Κινδύνου Πυρκαγιάς" />
+        </div>
+
+        <div class="map-footer">
+          <span class="muted">Πηγή preview: civilprotection.gov.gr</span>
+          <span class="muted">Αρχείο: 251031.jpg</span>
+        </div>
+      </section>
+
+      <aside class="card card-legend">
+        <div class="card-head">
+          <div>
+            <h2>Κατηγορίες επικινδυνότητας</h2>
+            <p class="muted">Επίσημη κλίμακα 1 έως 5</p>
+          </div>
+        </div>
+
+        <div class="legend-list">
+          <article class="legend-item level-1">
+            <div class="legend-title"><span class="swatch"></span><strong>1. Χαμηλή</strong></div>
+            <p>Η πιθανότητα εκδήλωσης πυρκαγιάς δεν είναι ιδιαίτερα υψηλή και οι συνθήκες δεν ευνοούν γρήγορη εξέλιξη.</p>
+          </article>
+          <article class="legend-item level-2">
+            <div class="legend-title"><span class="swatch"></span><strong>2. Μέση</strong></div>
+            <p>Συνήθης θερινός κίνδυνος. Πιθανές πυρκαγιές αναμένονται μέσης δυσκολίας στην αντιμετώπιση.</p>
+          </article>
+          <article class="legend-item level-3">
+            <div class="legend-title"><span class="swatch"></span><strong>3. Υψηλή</strong></div>
+            <p>Είναι πιθανός αυξημένος αριθμός πυρκαγιών, αρκετές από τις οποίες μπορεί να είναι δύσκολες στην αντιμετώπιση.</p>
+          </article>
+          <article class="legend-item level-4">
+            <div class="legend-title"><span class="swatch"></span><strong>4. Πολύ Υψηλή</strong></div>
+            <p>Αναμένεται μεγάλος αριθμός πυρκαγιών και κάθε συμβάν που ξεφεύγει από την αρχική προσβολή μπορεί να λάβει μεγάλες διαστάσεις.</p>
+          </article>
+          <article class="legend-item level-5">
+            <div class="legend-title"><span class="swatch"></span><strong>5. Κατάσταση Συναγερμού</strong></div>
+            <p>Ακραίος κίνδυνος. Όλες οι πυρκαγιές μπορούν να λάβουν γρήγορα μεγάλες διαστάσεις με ακραία συμπεριφορά.</p>
+          </article>
+        </div>
+      </aside>
+
+      <section class="card card-weather full-width">
+        <div class="card-head">
+          <div>
+            <h2>Πρόγνωση καιρού</h2>
+            <p class="muted">Συνθήκες που επηρεάζουν την επιχειρησιακή εικόνα, θερμοκρασία, υγρασία, άνεμος, βροχή.</p>
+          </div>
+          <div class="location-picker">
+            <label for="locationSelect">Περιοχή παρακολούθησης</label>
+            <select id="locationSelect"></select>
+          </div>
+        </div>
+
+        <div class="weather-grid">
+          <div class="weather-box">
+            <span class="status-label">Τώρα</span>
+            <strong id="currentTemp">-</strong>
+            <span id="currentSummary" class="muted small">-</span>
+          </div>
+          <div class="weather-box">
+            <span class="status-label">Άνεμος</span>
+            <strong id="currentWind">-</strong>
+            <span id="currentWindDir" class="muted small">-</span>
+          </div>
+          <div class="weather-box">
+            <span class="status-label">Υγρασία</span>
+            <strong id="currentHumidity">-</strong>
+            <span class="muted small">Σχετική υγρασία</span>
+          </div>
+          <div class="weather-box">
+            <span class="status-label">Βροχή</span>
+            <strong id="currentRain">-</strong>
+            <span class="muted small">Τρέχουσα ένταση</span>
+          </div>
+        </div>
+
+        <div class="forecast-strip" id="forecastStrip"></div>
+        <div id="weatherNotice" class="notice hidden"></div>
+      </section>
+
+      <section class="card full-width card-notes">
+        <h2>Χρήσιμη σημείωση</h2>
+        <p>
+          Ο χάρτης δείχνει επίπεδα πρόβλεψης επικινδυνότητας και όχι πραγματική ενεργή πυρκαγιά. Η εφαρμογή
+          βοηθά στην καθημερινή εικόνα ετοιμότητας, ειδικά για ομάδες πυροπροστασίας και εθελοντές.
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const LOCATIONS = [
+      { name: 'Πάρνηθα', latitude: 38.1507, longitude: 23.7352 },
+      { name: 'Αχαρνές', latitude: 38.0833, longitude: 23.7333 },
+      { name: 'Ολυμπιακό Χωριό', latitude: 38.0941, longitude: 23.7063 },
+      { name: 'Θρακομακεδόνες', latitude: 38.1375, longitude: 23.7575 },
+      { name: 'Τατόι', latitude: 38.1464, longitude: 23.7737 },
+      { name: 'Αθήνα', latitude: 37.9838, longitude: 23.7275 },
+    ];
+
+    const el = {
+      refreshBtn: document.getElementById('refreshBtn'),
+      locationSelect: document.getElementById('locationSelect'),
+      currentTemp: document.getElementById('currentTemp'),
+      currentSummary: document.getElementById('currentSummary'),
+      currentWind: document.getElementById('currentWind'),
+      currentWindDir: document.getElementById('currentWindDir'),
+      currentHumidity: document.getElementById('currentHumidity'),
+      currentRain: document.getElementById('currentRain'),
+      forecastStrip: document.getElementById('forecastStrip'),
+      weatherNotice: document.getElementById('weatherNotice'),
+      lastChecked: document.getElementById('lastChecked'),
+    };
+
+    function formatDateTime(value) {
+      if (!value) return '-';
+      try {
+        return new Intl.DateTimeFormat('el-GR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
+      } catch {
+        return value;
+      }
+    }
+
+    function formatGreekDate(dateString) {
+      if (!dateString) return '-';
+      const parsed = new Date(dateString);
+      if (Number.isNaN(parsed.getTime())) return dateString;
+      return new Intl.DateTimeFormat('el-GR', {
+        weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric'
+      }).format(parsed);
+    }
+
+    function windDirectionLabel(degrees) {
+      if (degrees === null || degrees === undefined || Number.isNaN(Number(degrees))) return '-';
+      const dirs = ['Β', 'ΒΑ', 'Α', 'ΝΑ', 'Ν', 'ΝΔ', 'Δ', 'ΒΔ'];
+      const index = Math.round((((Number(degrees) % 360) + 360) % 360) / 45) % 8;
+      return `${dirs[index]} (${Math.round(Number(degrees))}°)`;
+    }
+
+    function weatherCodeLabel(code) {
+      const labels = {
+        0: 'Αίθριος', 1: 'Κυρίως αίθριος', 2: 'Λίγες νεφώσεις', 3: 'Συννεφιά',
+        45: 'Ομίχλη', 48: 'Πάχνη', 51: 'Ψιλόβροχο', 53: 'Ασθενής βροχή',
+        55: 'Βροχή', 61: 'Ασθενής βροχή', 63: 'Βροχή', 65: 'Ισχυρή βροχή',
+        71: 'Ασθενής χιονόπτωση', 73: 'Χιονόπτωση', 75: 'Ισχυρή χιονόπτωση',
+        80: 'Μπόρες', 81: 'Ισχυρές μπόρες', 82: 'Πολύ ισχυρές μπόρες',
+        95: 'Καταιγίδα', 96: 'Καταιγίδα με χαλάζι', 99: 'Ισχυρή καταιγίδα με χαλάζι'
+      };
+      return labels[code] || 'Χωρίς διαθέσιμη περιγραφή';
+    }
+
+    function showNotice(target, message) {
+      if (!message) {
+        target.textContent = '';
+        target.classList.add('hidden');
+        return;
+      }
+      target.textContent = message;
+      target.classList.remove('hidden');
+    }
+
+    function populateLocations() {
+      LOCATIONS.forEach((location, index) => {
+        const option = document.createElement('option');
+        option.value = String(index);
+        option.textContent = location.name;
+        if (location.name === 'Πάρνηθα') option.selected = true;
+        el.locationSelect.appendChild(option);
+      });
+    }
+
+    async function loadWeather() {
+      const location = LOCATIONS[Number(el.locationSelect.value)] || LOCATIONS[0];
+      showNotice(el.weatherNotice, '');
+      el.lastChecked.textContent = formatDateTime(new Date().toISOString());
+
+      try {
+        const params = new URLSearchParams({
+          latitude: location.latitude,
+          longitude: location.longitude,
+          current: 'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,wind_speed_10m,wind_direction_10m,weather_code',
+          daily: 'weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_probability_max',
+          forecast_days: '5',
+          timezone: 'auto'
+        });
+
+        const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+        const current = data.current || {};
+        const daily = data.daily || {};
+
+        el.currentTemp.textContent = current.temperature_2m !== undefined ? `${Math.round(current.temperature_2m)}°C` : '-';
+        el.currentSummary.textContent = weatherCodeLabel(current.weather_code);
+        el.currentWind.textContent = current.wind_speed_10m !== undefined ? `${Math.round(current.wind_speed_10m)} km/h` : '-';
+        el.currentWindDir.textContent = windDirectionLabel(current.wind_direction_10m);
+        el.currentHumidity.textContent = current.relative_humidity_2m !== undefined ? `${Math.round(current.relative_humidity_2m)}%` : '-';
+        el.currentRain.textContent = current.precipitation !== undefined ? `${Number(current.precipitation).toFixed(1)} mm` : '-';
+
+        const days = (daily.time || []).map((date, index) => ({
+          date,
+          code: daily.weather_code?.[index],
+          min: daily.temperature_2m_min?.[index],
+          max: daily.temperature_2m_max?.[index],
+          wind: daily.wind_speed_10m_max?.[index],
+          rainProb: daily.precipitation_probability_max?.[index],
+        }));
+
+        el.forecastStrip.innerHTML = '';
+        days.forEach((day) => {
+          const card = document.createElement('article');
+          card.className = 'forecast-day';
+          card.innerHTML = `
+            <h3>${formatGreekDate(day.date)}</h3>
+            <p>${weatherCodeLabel(day.code)}</p>
+            <p>Θερμοκρασία: ${Math.round(day.min)}°C έως ${Math.round(day.max)}°C</p>
+            <p>Άνεμος: ${Math.round(day.wind)} km/h</p>
+            <p>Πιθανότητα βροχής: ${day.rainProb ?? '-'}%</p>
+          `;
+          el.forecastStrip.appendChild(card);
+        });
+
+        const alertNotes = [];
+        if (current.wind_speed_10m >= 35) alertNotes.push('Οι άνεμοι είναι ενισχυμένοι για την επιλεγμένη περιοχή.');
+        if (current.relative_humidity_2m <= 30) alertNotes.push('Η σχετική υγρασία είναι χαμηλή.');
+        if (current.temperature_2m >= 34) alertNotes.push('Η θερμοκρασία είναι υψηλή.');
+        if (alertNotes.length) showNotice(el.weatherNotice, `${location.name}: ${alertNotes.join(' ')}`);
+      } catch (error) {
+        showNotice(el.weatherNotice, `Δεν ήταν δυνατή η φόρτωση πρόγνωσης καιρού για ${location.name}. ${error.message}`);
+      }
+    }
+
+    populateLocations();
+    loadWeather();
+    el.refreshBtn.addEventListener('click', loadWeather);
+    el.locationSelect.addEventListener('change', loadWeather);
+  </script>
+</body>
+</html>
